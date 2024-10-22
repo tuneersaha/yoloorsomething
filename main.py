@@ -5,7 +5,6 @@ import math
 
 app = Flask(__name__)
 
-# Initialize YOLO model
 model = YOLO("yolo-Weights/yolov8n.pt")
 
 classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
@@ -20,7 +19,6 @@ classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "trai
               "teddy bear", "hair drier", "toothbrush"
               ]
 
-# Delay the camera initialization until Flask requests it
 cap = None
 
 def gen_frames():
@@ -31,7 +29,7 @@ def gen_frames():
         cap.set(4, 480)
 
     while True:
-        success, img = cap.read()  # Read frame from webcam
+        success, img = cap.read() 
         if not success:
             break
         else:
@@ -41,19 +39,11 @@ def gen_frames():
                 for box in boxes:
                     x1, y1, x2, y2 = box.xyxy[0]
                     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                    
-                    # Draw the bounding box
                     cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-
-                    # Get confidence and class index
-                    confidence = math.ceil((box.conf[0] * 100)) / 100  # Round confidence to 2 decimal places
+                    confidence = math.ceil((box.conf[0] * 100)) / 100 
                     cls = int(box.cls[0])
-
-                    # Prepare the text for class name and confidence
                     label = f"cls:{classNames[cls]} cfv:{confidence:.2f}"
-                    org = (x1, y1 - 10)  # Positioning the label above the bounding box
-
-                    # Add the text (class + confidence)
+                    org = (x1, y1 - 10) 
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     fontScale = 1
                     color = (255, 0, 0)
