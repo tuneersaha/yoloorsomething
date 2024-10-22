@@ -3,10 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Stream</title>
+    <title>YOLOv8 Webcam Stream</title>
+    <!-- Include Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Webcam Stream with YOLO Detection</h1>
-    <img src="{{ url_for('video_feed') }}" width="640" height="480">
+<body class="bg-black">
+
+    <div class="container mx-auto p-4">
+        <!-- Title Section -->
+        <h1 class="text-4xl font-extrabold text-center text-blue-400 mb-4">
+            YOLOv8 Object Detection Stream
+        </h1>
+
+        <!-- Video Stream Section -->
+        <div class="flex justify-center">
+            <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-4 rounded-xl shadow-xl border border-gray-500">
+                <!-- Video size: 720x540 with reduced padding -->
+                <img src="{{ url_for('video_feed') }}" class="rounded-lg" width="720" height="540">
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="text-center mt-8">
+            <p class="text-xl text-gray-300">
+                Real-time object detection using <span class="text-blue-400 font-semibold">YOLOv8</span>. 
+                Watch as objects are detected and labeled in the video feed.
+            </p>
+        </div>
+    </div>
+
 </body>
 </html>
