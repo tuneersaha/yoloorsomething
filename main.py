@@ -7,8 +7,10 @@ import numpy as np
 
 app = Flask(__name__)
 
+# Load the YOLO model
 model = YOLO("yolo-Weights/yolov8n.pt")
 
+# Class names for the YOLO model
 classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
               "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
               "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
