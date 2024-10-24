@@ -1,7 +1,9 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request, jsonify
 import cv2
+import base64
 from ultralytics import YOLO
 import math
+import numpy as np
 
 app = Flask(__name__)
 
@@ -19,49 +21,34 @@ classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "trai
               "teddy bear", "hair drier", "toothbrush"
               ]
 
-cap = None
-
-def gen_frames():
-    global cap
-    if cap is None:
-        cap = cv2.VideoCapture(0)
-        cap.set(3, 640)
-        cap.set(4, 480)
-
-    while True:
-        success, img = cap.read() 
-        if not success:
-            break
-        else:
-            results = model(img, stream=True)
-            for r in results:
-                boxes = r.boxes
-                for box in boxes:
-                    x1, y1, x2, y2 = box.xyxy[0]
-                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                    cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
-                    confidence = math.ceil((box.conf[0] * 100)) / 100 
-                    cls = int(box.cls[0])
-                    label = f"cls:{classNames[cls]} cfv:{confidence:.2f}"
-                    org = (x1, y1 - 10) 
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    fontScale = 1
-                    color = (255, 0, 0)
-                    thickness = 2
-                    cv2.putText(img, label, org, font, fontScale, color, thickness)
-
-            ret, buffer = cv2.imencode('.jpg', img)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-@app.route('/video_feed')
-def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/process_frame', methods=['POST'])
+def process_frame():
+    # Receive the image data from the client
+    data = request.json['image']
+    img_data = base64.b64decode(data.split(',')[1])
+    np_img = np.frombuffer(img_data, np.uint8)
+    img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+
+    # Run YOLO object detection
+    results = model(img, stream=True)
+    
+    detections = []
+    for r in results:
+        boxes = r.boxes
+        for box in boxes:
+            cls = int(box.cls[0])
+            confidence = math.ceil((box.conf[0] * 100)) / 100 
+            detections.append({
+                "class": classNames[cls],
+                "confidence": confidence
+            })
+
+    # Send detected class names and confidence back to client
+    return jsonify(detections)
 
 if __name__ == "__main__":
     app.run(debug=True)

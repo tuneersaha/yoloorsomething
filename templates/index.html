@@ -14,7 +14,8 @@
         </h1>
         <div class="flex justify-center">
             <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-4 rounded-xl shadow-xl border border-gray-500">
-                <img src="{{ url_for('video_feed') }}" class="rounded-lg" width="720" height="540">
+                <!-- Display the webcam video -->
+                <video id="webcam" autoplay playsinline width="720" height="540" class="rounded-lg"></video>
             </div>
         </div>
         <div class="text-center mt-8">
@@ -23,6 +24,65 @@
                 Watch as objects are detected and labeled in the video feed.
             </p>
         </div>
+        <div class="text-center mt-4">
+            <h2 class="text-lg text-blue-400 font-semibold">Detected Objects:</h2>
+            <ul id="detections" class="text-gray-300"></ul>
+        </div>
     </div>
+
+    <!-- Client-side JavaScript for accessing the webcam and sending frames -->
+    <script>
+        const video = document.getElementById('webcam');
+        const detectionsList = document.getElementById('detections');
+
+        // Request access to the user's webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+
+                // Periodically capture frames and send to Flask
+                setInterval(captureFrame, 100); // Capture every 100 ms
+            })
+            .catch(error => {
+                console.error("Error accessing webcam: ", error);
+            });
+
+        function captureFrame() {
+            // Create a canvas to draw the video frame
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+
+            // Draw the current frame from the video to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas to a data URL (base64 format image)
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            // Send the frame to the Flask server
+            fetch('/process_frame', {
+                method: 'POST',
+                body: JSON.stringify({ image: imageData }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the detected objects in the list
+                detectionsList.innerHTML = '';
+                data.forEach(detection => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${detection.class}: ${detection.confidence.toFixed(2)}`;
+                    detectionsList.appendChild(listItem);
+                });
+            })
+            .catch(error => {
+                console.error("Error sending frame:", error);
+            });
+        }
+    </script>
 </body>
 </html>
