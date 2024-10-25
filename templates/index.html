@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YOLOv8 Webcam Stream</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .facebox {
+            border: 2px solid red; 
+            position: absolute;
+        }
+        #switchCamera {
+            display: none; 
+        }
+        @media (max-width: 768px) { 
+            #switchCamera {
+                display: block; 
+            }
+        }
+    </style>
 </head>
 <body class="bg-black">
 
@@ -13,9 +27,9 @@
             YOLOv8 Object Detection Stream
         </h1>
         <div class="flex justify-center">
-            <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-4 rounded-xl shadow-xl border border-gray-500">
-                <!-- Display the webcam video -->
+            <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-4 rounded-xl shadow-xl border border-gray-500 relative">
                 <video id="webcam" autoplay playsinline width="720" height="540" class="rounded-lg"></video>
+                <canvas id="overlay" class="absolute top-0 left-0 rounded-lg" width="720" height="540"></canvas>
             </div>
         </div>
         <div class="text-center mt-8">
@@ -28,40 +42,54 @@
             <h2 class="text-lg text-blue-400 font-semibold">Detected Objects:</h2>
             <ul id="detections" class="text-gray-300"></ul>
         </div>
+        <div class="text-center mt-4">
+            <button id="switchCamera" class="bg-blue-500 text-white px-4 py-2 rounded">
+                Switch Camera
+            </button>
+        </div>
     </div>
 
-    <!-- Client-side JavaScript for accessing the webcam and sending frames -->
     <script>
         const video = document.getElementById('webcam');
         const detectionsList = document.getElementById('detections');
+        const overlay = document.getElementById('overlay');
+        const overlayContext = overlay.getContext('2d');
+        let currentStream; 
+        let facingMode = 'user'; 
 
-        // Request access to the user's webcam
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                currentStream = stream;
                 video.srcObject = stream;
                 video.play();
-
-                // Periodically capture frames and send to Flask
-                setInterval(captureFrame, 100); // Capture every 100 ms
-            })
-            .catch(error => {
+                setInterval(captureFrame, 200); 
+            } catch (error) {
                 console.error("Error accessing webcam: ", error);
-            });
+            }
+        }
+
+
+        startCamera();
+
+        document.getElementById('switchCamera').addEventListener('click', () => {
+            facingMode = (facingMode === 'user') ? 'environment' : 'user';
+            startCamera(); 
+        });
 
         function captureFrame() {
-            // Create a canvas to draw the video frame
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const context = canvas.getContext('2d');
 
-            // Draw the current frame from the video to the canvas
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Convert the canvas to a data URL (base64 format image)
             const imageData = canvas.toDataURL('image/jpeg');
 
-            // Send the frame to the Flask server
             fetch('/process_frame', {
                 method: 'POST',
                 body: JSON.stringify({ image: imageData }),
@@ -71,13 +99,23 @@
             })
             .then(response => response.json())
             .then(data => {
-                // Display the detected objects in the list
+
+                overlayContext.clearRect(0, 0, overlay.width, overlay.height);
                 detectionsList.innerHTML = '';
-                data.forEach(detection => {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `${detection.class}: ${detection.confidence.toFixed(2)}`;
-                    detectionsList.appendChild(listItem);
-                });
+
+                if (Array.isArray(data.detections)) {
+                    data.detections.forEach(detection => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `${detection.class}: ${detection.confidence.toFixed(2)}`;
+                        detectionsList.appendChild(listItem);
+
+                        overlayContext.strokeStyle = 'red'; 
+                        overlayContext.lineWidth = 2; 
+                        overlayContext.strokeRect(detection.x, detection.y, detection.width, detection.height); 
+                    });
+                } else {
+                    console.error("Detected data is not an array:", data);
+                }
             })
             .catch(error => {
                 console.error("Error sending frame:", error);
