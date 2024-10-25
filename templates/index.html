@@ -15,8 +15,19 @@
         }
         @media (max-width: 768px) { 
             #switchCamera {
-                display: block; 
+                display: inline-block;
             }
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 720px;
+            margin: auto;
+        }
+        #webcam, #overlay {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -26,11 +37,9 @@
         <h1 class="text-4xl font-extrabold text-center text-blue-400 mb-4">
             YOLOv8 Object Detection Stream
         </h1>
-        <div class="flex justify-center">
-            <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-4 rounded-xl shadow-xl border border-gray-500 relative">
-                <video id="webcam" autoplay playsinline width="720" height="540" class="rounded-lg"></video>
-                <canvas id="overlay" class="absolute top-0 left-0 rounded-lg" width="720" height="540"></canvas>
-            </div>
+        <div class="video-container">
+            <video id="webcam" autoplay playsinline class="rounded-lg"></video>
+            <canvas id="overlay" class="absolute top-0 left-0 rounded-lg"></canvas>
         </div>
         <div class="text-center mt-8">
             <p class="text-xl text-gray-300">
@@ -42,8 +51,9 @@
             <h2 class="text-lg text-blue-400 font-semibold">Detected Objects:</h2>
             <ul id="detections" class="text-gray-300"></ul>
         </div>
-        <div class="text-center mt-4">
-            <button id="switchCamera" class="bg-blue-500 text-white px-4 py-2 rounded">
+        <div class="text-center mt-4 md:hidden">
+            <!-- Centered on mobile with margin auto -->
+            <button id="switchCamera" class="bg-blue-500 text-white px-4 py-2 rounded mx-auto">
                 Switch Camera
             </button>
         </div>
@@ -72,8 +82,13 @@
             }
         }
 
+        function adjustOverlaySize() {
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+        }
 
         startCamera();
+        video.onloadedmetadata = adjustOverlaySize;
 
         document.getElementById('switchCamera').addEventListener('click', () => {
             facingMode = (facingMode === 'user') ? 'environment' : 'user';
@@ -81,6 +96,7 @@
         });
 
         function captureFrame() {
+            adjustOverlaySize();
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -99,7 +115,6 @@
             })
             .then(response => response.json())
             .then(data => {
-
                 overlayContext.clearRect(0, 0, overlay.width, overlay.height);
                 detectionsList.innerHTML = '';
 
