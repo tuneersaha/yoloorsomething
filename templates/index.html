@@ -52,7 +52,6 @@
             <ul id="detections" class="text-gray-300"></ul>
         </div>
         <div class="text-center mt-4 md:hidden">
-            <!-- Centered on mobile with margin auto -->
             <button id="switchCamera" class="bg-blue-500 text-white px-4 py-2 rounded mx-auto">
                 Switch Camera
             </button>
@@ -64,12 +63,37 @@
         const detectionsList = document.getElementById('detections');
         const overlay = document.getElementById('overlay');
         const overlayContext = overlay.getContext('2d');
-        let currentStream; 
-        let facingMode = 'user'; 
+        let currentStream;
+        let frontCameraId = null;
+        let mainBackCameraId = null;
+        let isUsingFrontCamera = true; // Track which camera is active
 
-        async function startCamera() {
+        // Detect available cameras and assign front and main back camera IDs
+        async function detectCameras() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                devices.forEach(device => {
+                    if (device.kind === 'videoinput') {
+                        if (device.label.toLowerCase().includes('front')) {
+                            frontCameraId = device.deviceId;
+                        } else if (device.label.toLowerCase().includes('back') && !mainBackCameraId) {
+                            mainBackCameraId = device.deviceId;
+                        }
+                    }
+                });
+                if (!frontCameraId || !mainBackCameraId) {
+                    console.warn("Could not detect front or main back camera.");
+                }
+            } catch (error) {
+                console.error("Error detecting cameras:", error);
+            }
+        }
+
+        async function startCamera(deviceId = null) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: isUsingFrontCamera ? 'user' : 'environment' }
+                });
                 if (currentStream) {
                     currentStream.getTracks().forEach(track => track.stop());
                 }
@@ -87,12 +111,23 @@
             overlay.height = video.videoHeight;
         }
 
-        startCamera();
+        // Initialize by detecting cameras and starting the front camera
+        detectCameras().then(() => {
+            if (frontCameraId) {
+                startCamera(frontCameraId);
+            } else {
+                startCamera(); // Fall back to default facing mode if no front camera ID
+            }
+        });
+
         video.onloadedmetadata = adjustOverlaySize;
 
         document.getElementById('switchCamera').addEventListener('click', () => {
-            facingMode = (facingMode === 'user') ? 'environment' : 'user';
-            startCamera(); 
+            isUsingFrontCamera = !isUsingFrontCamera; // Toggle the camera usage
+            const deviceId = isUsingFrontCamera ? frontCameraId : mainBackCameraId;
+            if (deviceId) {
+                startCamera(deviceId);
+            }
         });
 
         function captureFrame() {
