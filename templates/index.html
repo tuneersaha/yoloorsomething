@@ -102,7 +102,18 @@
                 video.play();
                 setInterval(captureFrame, 200); 
             } catch (error) {
-                console.error("Error accessing webcam: ", error);
+                if (error.name === "NotReadableError") {
+                    console.error("NotReadableError: Camera might be in use by another application or permission is denied.");
+                    alert("Camera access error: Ensure no other applications are using the camera.");
+                } else if (error.name === "NotAllowedError") {
+                    console.error("Permission denied: Please allow camera access.");
+                    alert("Permission denied: Please allow camera access in your browser settings.");
+                } else if (error.name === "OverconstrainedError") {
+                    console.error("OverconstrainedError: The specified camera settings are not available on this device.");
+                    alert("Requested camera device not available. Try switching the camera.");
+                } else {
+                    console.error("Error accessing webcam: ", error);
+                }
             }
         }
 
