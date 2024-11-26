@@ -5,7 +5,7 @@ import numpy as np
 from ultralytics import YOLO
 
 app = Flask(__name__)
-model = YOLO('yolo-Weights/yolov10n.pt')  # Load the YOLOv10 model
+model = YOLO('yolo-Weights/yolov10n.pt') 
 
 @app.route('/')
 def index():
@@ -19,20 +19,16 @@ def process_frame():
         np_img = np.frombuffer(img_data, np.uint8)
         img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
 
-        # Run YOLOv10 inference
         results = model(img)
 
         detections = []
         for r in results:
             boxes = r.boxes
             for box in boxes:
-                cls = int(box.cls[0])  # Class index
-                confidence = box.conf[0].item()  # Confidence score
-
-                # Get class names dynamically
+                cls = int(box.cls[0])  
+                confidence = box.conf[0].item()  
                 class_name = model.names[cls] if model.names else f'Class {cls}'
 
-                # Create detection dictionary
                 detection = {
                     "class": class_name,
                     "confidence": confidence,
@@ -43,25 +39,9 @@ def process_frame():
                 }
                 detections.append(detection)
 
-                # Draw bounding box on the image
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Red color for bounding box
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
-                # Prepare text label with class name and confidence
-                label = f'{class_name} {confidence:.2f}'
-                label_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-
-                # Ensure label is directly above the box
-                label_y = y1 - 10 if y1 - 10 > 10 else y1 + 10 + label_size[1]
-                
-                # Draw a filled rectangle as a background for the text
-                cv2.rectangle(img, (x1, label_y - label_size[1] - 5), 
-                              (x1 + label_size[0], label_y + 5), (0, 0, 255), -1)
-                
-                # Draw text on top of the background rectangle
-                cv2.putText(img, label, (x1, label_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-        # Encode processed image to base64
         _, buffer = cv2.imencode('.jpg', img)
         processed_img_str = base64.b64encode(buffer).decode('utf-8')
 
@@ -73,3 +53,4 @@ def process_frame():
 
 if __name__ == "__main__":
     app.run(debug=True)
+q

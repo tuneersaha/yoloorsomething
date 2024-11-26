@@ -66,9 +66,7 @@
         let currentStream;
         let frontCameraId = null;
         let mainBackCameraId = null;
-        let isUsingFrontCamera = true; // Track which camera is active
-
-        // Detect available cameras and assign front and main back camera IDs
+        let isUsingFrontCamera = true; 
         async function detectCameras() {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
@@ -122,19 +120,18 @@
             overlay.height = video.videoHeight;
         }
 
-        // Initialize by detecting cameras and starting the front camera
         detectCameras().then(() => {
             if (frontCameraId) {
                 startCamera(frontCameraId);
             } else {
-                startCamera(); // Fall back to default facing mode if no front camera ID
+                startCamera(); 
             }
         });
 
         video.onloadedmetadata = adjustOverlaySize;
 
         document.getElementById('switchCamera').addEventListener('click', () => {
-            isUsingFrontCamera = !isUsingFrontCamera; // Toggle the camera usage
+            isUsingFrontCamera = !isUsingFrontCamera; 
             const deviceId = isUsingFrontCamera ? frontCameraId : mainBackCameraId;
             if (deviceId) {
                 startCamera(deviceId);
